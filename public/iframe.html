@@ -1,0 +1,32 @@
+<html lang="en">
+  <link rel='stylesheet' href='./global.css'>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: lightgrey;
+    }
+    main {
+      margin: 0 auto;
+      padding: 20px;
+      width: calc(100% - 20px);
+      max-width: 800px;
+      height: 100%;
+      background-color: white;
+    }
+    h1 {
+      margin: 10px 0;
+    }
+  </style>
+  <body>
+    <main>
+      <h1>iFrame test</h1>
+      <div id="game"></div>
+      <script src="http://cdn.ons.gov.uk/vendor/pym/1.3.2/pym.min.js"></script>
+      <script>var pymParent = new pym.Parent("game", "./");</script>
+    </main>
+  </body>
+</html>

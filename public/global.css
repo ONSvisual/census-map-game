@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap');
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	position: relative;
+	background-color: white;
+	box-sizing: border-box;
+	color: #222;
+	margin: 0;
+	padding: 0;
+	font-family: 'Open Sans', sans-serif;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+a {
+	text-decoration:none;
+  color:#206095;
+  word-wrap:break-word;
+}
+
+a:hover, a:focus {
+  text-decoration:underline
+}
+
+a:visited {
+	color: rgb(0,80,160);
+}
+
+label {
+	display: block;
+}
+
+input, button, select, textarea {
+	font-family: inherit;
+	font-size: inherit;
+	-webkit-padding: 0.4em 0;
+	padding: 0.4em;
+	margin: 0 0 0.5em 0;
+	box-sizing: border-box;
+	border: 1px solid #ccc;
+	border-radius: 2px;
+}
+
+input:disabled {
+	color: #ccc;
+}
+
+button {
+	color: #333;
+	background-color: #f4f4f4;
+	outline: none;
+}
+
+button:disabled {
+	color: #999;
+}
+
+button:not(:disabled):active {
+	background-color: #ddd;
+}
+
+button:focus {
+	border-color: #666;
+}
+
+.visuallyhidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0,0,0,0);
+	border: 0;
+}
