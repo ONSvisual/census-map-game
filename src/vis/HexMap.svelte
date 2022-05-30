@@ -3,6 +3,7 @@
 	const dispatch = createEventDispatcher();
 	import { select } from 'd3-selection';
 	import { zoom } from 'd3-zoom';
+	import tooltip from '../ui/tooltip';
 	import Icon from '../ui/Icon.svelte';
 	
 	export let data;
@@ -134,7 +135,7 @@
 		<g style:transform="{transform ? transform : `translate(${x}px, ${y}px) scale(${z})`}">
 			{#each data as d}
 			<g on:click="{!simple && d.status != 'disabled' ? (e) => onClick(e, d) : null}" bind:this={hexes[d.key]} class="{!route ? d.status : vis ? '' : getStatus(d.key, route)}" transform="translate({d.x} {d.y})">
-				<polygon class="hex" points="{makePoints(d.vertices)}" style:fill={vis ? hexdata[d.key].color : null} style:stroke={vis ? hexdata[d.key].color : null}/>
+				<polygon class="hex" points="{makePoints(d.vertices)}" style:fill={vis ? hexdata[d.key].color : null} style:stroke={vis ? hexdata[d.key].color : null} title="{d.n}" use:tooltip/>
 				{#if !simple}
 				<text class="text" aria-hidden="true">{d.n.slice(0,1)}</text>
 				{/if}
@@ -148,7 +149,7 @@
 				aria-label={message}>
 				{#each next as d, i}
 				<g role="button" tabindex={i == next_index ? 0 : -1} on:click="{(e) => onClick(e, d)}" on:keydown="{(e) => onKeydown(e, d)}" bind:this={hexes['next' + i]} class="adjacent-button" transform="translate({d.x} {d.y})">
-					<polygon class="hex" points="{makePoints(d.vertices)}"/>
+					<polygon class="hex" points="{makePoints(d.vertices)}" title="{d.n}" use:tooltip/>
 					{#if i == next_index}<polygon class="hex outline" points="{makePoints(d.vertices)}"/>{/if}
 					<text class="text" aria-hidden="true">{d.n.slice(0,1)}</text>
 					<title>{`${d.n}, ${d.direction}`}</title>
@@ -175,6 +176,7 @@
 		text-anchor: middle;
 		dominant-baseline: middle;
 		pointer-events: none;
+		transform: translateY(1px);
 	}
 	.start > polygon, .selected > polygon, .right > polygon {
 		fill: #22D0B6;

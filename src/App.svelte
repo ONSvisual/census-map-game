@@ -1,25 +1,30 @@
 <script>
+	import { format } from "d3-format";
 	import { renderHexJSON } from "./lib/hexjson";
 	import Random from "./lib/random";
-	import { getData, getAngle, getCompass, calcSteps, sleep, iniframe, getStorage, setStorage, getPNG } from "./utils";
+	import { getData, getAngle, getCompass, calcSteps, sleep, getStorage, setStorage, getPNG } from "./utils";
 	import { hexurl, adjurl, dataurl, game_defaults, history_defaults, routes, datasets, modes, sample_hexes } from "./config";
+	import tooltip from "./ui/tooltip";
 	import HexMap from "./vis/HexMap.svelte";
 	import Legend from "./vis/Legend.svelte";
 	import Bar from "./vis/Bar.svelte";
 	import Icon from "./ui/Icon.svelte";
 	import Select from "./ui/Select.svelte";
-	import AnalyticsBanner from "./ui/AnalyticsBanner.svelte";
 	import ONSLogo from "./ui/ONSLogo.svelte";
 	import CensusLogo from "./ui/CensusLogo.svelte";
 
+	// Hexmap settings
 	const width = 800;
 	const height = 1000;
 	const adjdist = 32.653; // Pixel distance between two adjacent hexes
 
-	// Constants for calculating daily game
-	const zeroday = Math.floor(new Date("2022-03-20").setHours(0,0,0,0) / (60 * 60 * 24 * 1000))
+	// Constants for calculating daily game. 28 June 2022 is daily game #1
+	const zeroday = Math.floor(new Date("2022-06-27").setHours(0,0,0,0) / (60 * 60 * 24 * 1000));
 	const today = Math.floor(new Date().setHours(0,0,0,0) / (60 * 60 * 24 * 1000));
 	const midnight = new Date().setHours(24,0,0,0);
+
+	// Initialise number formatter. Zero decimal places, 1,000s comma separated
+	const f = format(",.0f");
 
 	// Countdown in seconds to next daily game
 	let countdown;
@@ -50,17 +55,6 @@
 	let timer; // Variable for clock setInterval / clearInterval
 	let message_guess = ""; // Message for correct/incorrect guesses
 	let message_select = null; // Message for selection of areas on map
-
-	// GOOGLE ANALYTICS
-  // Settings for page analytics. Values must be shared with <AnalyticsBanner> component
-	let gtag;
-	const analyticsId = "GTM-MBCBVQS";
-	const analyticsProps = {
-		"contentTitle": "Census Map Game", // Insert the title of the product here
-		"releaseDate": "20220628",
-		"contentType": "edutainment", // Optional: eg. scrollytelling, exploratory, edutainment?
-		// "outputSeries": "url-slug-for-output-series" // Should match the slug for the release on CMS
-	};
 
 	function setHexes() {
 		let nexthexes_new = [];
@@ -127,14 +121,14 @@
 		}
 	}
 
-	function doSelect(e) {
+	async function doSelect(e) {
 		if (status == "select" && game.selected.adj.includes(e.detail.obj.key) && !game.wrong.includes(e.detail.obj.key)) {
 			game.next = e.detail.obj;
 			status = "question";
-			sleep(100).then(() => {
-				setHexes();
-				qhigher.focus();
-			});
+			await sleep(50);
+			setHexes();
+			await sleep(50);
+			qhigher.focus();
 		} else if (status == "route" && game.route == "map") {
 			if (!game.start) {
 				game.start = e.detail.obj.key;
@@ -146,7 +140,8 @@
 			} else {
 				game.steps = [];
 			}
-			sleep(100).then(() => setHexes());
+			await sleep(50);
+			setHexes();
 		}
 	}
 
@@ -157,7 +152,7 @@
 		) {
 			e.target.style["background-color"] = "#22D0B6";
 			message_guess = "Correct!";
-			await sleep(1000);
+			await sleep(750);
 			game.right.push(game.next.key);
 			game.record.push(true);
 			history.stats[game.mode].right += 1;
@@ -182,7 +177,7 @@
 		} else {
 			e.target.style["background-color"] = "#F66068";
 			message_guess = "Wrong..."
-			await sleep(500);
+			await sleep(750);
 			game.wrong.push(game.next.key);
 			game.record.push(false);
 			history.stats[game.mode].wrong += 1;
@@ -228,13 +223,24 @@
 		}
 		setStorage("hexgame-history", history);
 
-		if(status == "select") {
-			sleep(100).then(() => maphexes["next0"].focus());
+		if (status == "select") {
+			await sleep(50);
+			maphexes["next0"].focus();
+		}
+
+		if (status == "won" || status == "lost") {
+			dataLayer.push({
+				event: "gameStart",
+				result: status,
+				mode: game.mode,
+				dataset: game.dataset,
+				start: data[game.start].name,
+				end: data[game.end].name
+			});
 		}
 	}
 
-	function startGame() {
-		console.log('starting')
+	async function startGame() {
 		game.right = [];
 		game.wrong = [];
 		game.next = game.mode == "fixed" ? hexes.find(d => d.key == game.steps[1]) : null;
@@ -250,6 +256,15 @@
 				if (clock == 0) {
 					clearInterval(timer);
 					if (status != "won") status = "lost";
+
+					dataLayer.push({
+						event: "gameStart",
+						result: status,
+						mode: game.mode,
+						dataset: game.dataset,
+						start: data[game.start].name,
+						end: data[game.end].name
+					});
 				}
 			}
 		}
@@ -264,22 +279,30 @@
 			setStorage("hexgame-history", history);
 		}
 
-		sleep(100).then(() => {
-			if(game.mode == "fixed") {
-				qhigher.focus();
-			} else {
-				maphexes["next0"].focus();
-			}
+		dataLayer.push({
+			event: "gameStart",
+			mode: game.mode,
+			dataset: game.dataset,
+			start: data[game.start].name,
+			end: data[game.end].name
 		});
+
+		await sleep(50);
+		if (game.mode == "fixed") {
+			qhigher.focus();
+		} else {
+			maphexes["next0"].focus();
+		}
 	}
 
-	function startDaily() {
+	async function startDaily() {
 		if (history.daily.day == today && history.daily.game) {
 			game = JSON.parse(JSON.stringify(history.daily.game));
 			status = history.daily.result ? history.daily.result : game.next ? "question" : "select";
 			setHexes();
 			if(status == "select") {
-				sleep(100).then(() => maphexes["next0"].focus());
+				await sleep(50);
+				maphexes["next0"].focus();
 			}
 		} else {
 			history.daily.day = today;
@@ -324,22 +347,25 @@
 		return {start, end};
 	}
 
-	function resetRoute() {		
+	async function resetRoute() {		
 		let route = routes.find(d => d.code == game.route);
 		if (route.start && route.end) {
 			game.start = route.start;
 			game.end = route.end;
 			game.steps = calcSteps(game.start, game.end, adj);
+			await sleep(50);
 			setHexes();
 		} else if (route.code == "random" || route.code == "daily") {
 			let {start, end} = randomRoute(route.code == "daily" ? new Random(today) : Math.random);
 			game.start = start;
 			game.end = end;
 			game.steps = calcSteps(game.start, game.end, adj);
+			await sleep(50);
 			setHexes();
 		} else {
 			game.start = game.end = null;
 			game.steps = [];
+			await sleep(50);
 			setHexes();
 		}
 	}
@@ -394,18 +420,32 @@
 		}
 	}
 
-	function setStartEnd(e, pos) {
+	async function setStartEnd(e, pos) {
 		let other = pos == 'start' ? 'end' : 'start';
 		game[pos] = e.detail.key;
 		game.steps = game[other] ? calcSteps(game.start, game.end, adj) : [];
-		sleep(100).then(() => {
-			setHexes();
-			if (!game[other]) {
-				el['select-' + other].getElementsByTagName('input')[0].focus();
-			} else {
-				el['select-confirm'].focus();
-			}
-		});
+
+		await sleep(50);
+		setHexes();
+
+		await sleep(50);
+		if (!game[other]) {
+			el['select-' + other].getElementsByTagName('input')[0].focus();
+		} else {
+			el['select-confirm'].focus();
+		}
+	}
+
+	async function unSelect(start_end) {
+		game[start_end] = null;
+		game.steps = [];
+
+		await sleep(50);
+		setHexes();
+
+		await sleep(50);
+		if (start_end == "end" && !game.start) start_end = "start";
+		el["select-" + start_end].getElementsByTagName("input")[0].focus();
 	}
 
 	function share() {
@@ -414,8 +454,8 @@
 		let str = `#CensusMapGame | ${mode}
 ${data[game.start].name} to ${data[game.end].name} | ${dataset}
 ${game.record.map((d, i) => status == 'won' && i == game.record.length - 1 ? '🟦' : d ? '🟩' : '🟥').join('')}
-${status == 'won' ? 'Won' : 'Lost'} in ${game.record.length} turns (vs min ${game.steps.length - 1}) | ${Math.floor(100 * ((game.right.length - 1) / game.record.length))}% correct
-https://www.ons.gov.uk/visualisations/census-map-game/`;
+${status == 'won' ? 'Won' : 'Lost'} in ${game.record.length} turns (shortest route ${game.steps.length - 1}) | ${Math.floor(100 * ((game.right.length - 1) / game.record.length))}% correct
+https://bit.ly/census-map-game/`;
 		navigator.clipboard.writeText(str)
 		.then(() => alert("Copied: " + str));
 	}
@@ -457,15 +497,13 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 
 <svelte:body bind:this={main}/>
 
-<AnalyticsBanner {analyticsId} {analyticsProps} noBanner bind:gtag/>
-
 <main>
 <header>
 	<button on:click={() => setStatus("mode")} class="btn-link btn-title" title="Census Map Game. Return to menu"><h1>Census Map Game</h1></button>
 	<nav>
-		<button on:click={() => setStatus("info")} title="About the game"><Icon type="info"/></button>
-		<button on:click={() => setStatus("scores")} title="View score history"><Icon type="chart"/></button>
-		<button on:click={toggleFullscreen} title=" Full screen mode"><Icon type="{fullscreen ? 'full_exit' : 'full'}"/></button>
+		<button on:click={() => setStatus("info")} title="About the game" use:tooltip><Icon type="info"/></button>
+		<button on:click={() => setStatus("scores")} title="View score history" use:tooltip><Icon type="chart"/></button>
+		<button on:click={toggleFullscreen} title=" Full screen mode" use:tooltip><Icon type="{fullscreen ? 'full_exit' : 'full'}"/></button>
 	</nav>
 </header>
 
@@ -478,7 +516,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	<div id="game-container">
 		<section class="columns flex-reverse">
 			<div>
-				<div id="menu" style:padding-top="20px" role="form" aria-label="Press up or down to choose game mode. Enter to select.">
+				<div id="menu" role="form" aria-label="Press up or down to choose game mode. Enter to select.">
 					<button autofocus bind:this={el['daily-game']} class="btn-menu btn-primary mb-20" on:click={() => { game.mode = "daily"; game.dataset = "population"; game.route = "daily"; resetRoute(); startDaily(); }} on:keydown={cycleMenu}>Daily game</button>
 					{#each modes.filter(mode => mode.code != 'daily') as mode}
 					<button bind:this={el[mode.code]} class="btn-menu" on:click={() => { game.mode = mode.code; setStatus("dataset"); }} on:keydown={cycleMenu}>{mode.label + ' mode'} <Icon type="chevron" position="right"/></button>
@@ -497,32 +535,38 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 						interactive={false}
 					/>
 				</div>
-				<p><strong>Census Map Game</strong> is a higher or lower guessing game made with 2021 Census data.</p>
-				<p><button class="btn-link" on:click={() => setStatus("info")}>Read how to play...</button></p>
+				<p><strong>Census Map Game</strong> is a guessing game made with 2021 Census data.</p>
+				<p><button class="btn-link" on:click={() => setStatus("info")}>Read how to play</button><Icon type="chevron"/></p>
 			</div>
 		</section>
 	</div>
 	{:else if status === "dataset"}
 	<div id="breadcrumb">
-		<span><Icon type="chevron" rotation={180}/><button class="btn-link" on:click={() => setStatus("prev")}>Back</button></span>
+		<span>
+			<Icon type="chevron" rotation={180}/><button class="btn-link" on:click={() => setStatus("prev")}>Back</button> |
+			<span class="nowrap">{`${modes.find(d => d.code == game.mode).label} mode`}</span>
+		</span>
 	</div>
 	<div id="q-container" aria-live="assertive">
 		<h2><span class="text-lrg">Choose dataset</span></h2>
 	</div>
 	<div id="game-container">
-		<form
-			id="menu"
-			on:submit|preventDefault={() => { game.route = "random"; resetRoute(); startGame(); }}
-			aria-label="Press up or down to choose dataset. Enter to select.">
-			{#each datasets as dataset, i}
-			<label class:label-active={game.dataset == dataset.code} bind:this={el['dataset-' + i]}>
-				<input type="radio" bind:group={game.dataset} name="scoops" value={dataset.code}>
-				{dataset.label}
-			</label>
-			{/each}
-			<button type="submit" class="btn-menu btn-primary mt-10">Start game</button>
-			<button class="btn-menu btn-secondary" style:width="100%" on:click={() => { setStatus("route"); game.route = "map"; resetRoute(); sleep(100).then(() => el['select-start'].getElementsByTagName('input')[0].focus()) }}>Select route</button>
-		</form>
+		<section class="columns">
+			<div>
+				<form
+					id="menu"
+					on:submit|preventDefault={() => { game.route = "random"; resetRoute(); startGame(); }}
+					aria-label="Press up or down to choose dataset. Enter to select.">
+					{#each datasets as dataset, i}
+					<label class:label-active={game.dataset == dataset.code} bind:this={el['dataset-' + i]}>
+						<input type="radio" bind:group={game.dataset} name="scoops" value={dataset.code}>
+						{dataset.label}
+					</label>
+					{/each}
+					<button type="submit" class="btn-menu btn-primary mt-10" style:width="100%" on:click={async () => { setStatus("route"); game.route = "map"; resetRoute(); await sleep(50); el['select-start'].getElementsByTagName('input')[0].focus(); }}>Select route</button>
+				</form>
+			</div>
+		</section>
 	</div>
 	{:else if status === "info"}
 	<div id="breadcrumb">
@@ -535,7 +579,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 		<section class="columns">
 			<div>
 				<h3>How to play</h3>
-				<p><strong>Census Map Game</strong> is a guessing game made with 2021 Census data. Each hexagon on the map represents a local authority area in England and Wales.</p>
+				<p><strong>Census Map Game</strong> is a guessing game made with 2021 Census data. Each hexagon on the map is a local authority in England and Wales.</p>
 				<div class="mini-map" style:margin-top="5px" style:height="150px" style:max-width="500px">
 					<HexMap
 						data={hexes.filter(d => sample_hexes.includes(d.key))}
@@ -546,29 +590,34 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 						interactive={false}
 					/>
 				</div>
-				<p>Guess if the number (eg. population) is <strong>higher</strong> or <strong>lower</strong> than the previous area as you travel from a <mark class="mark-start">start</mark> point to an <mark class="mark-end">end</mark> point on the map.</p>
+				<p>
+					You need to travel from a <mark class="mark-start">start point</mark>
+					to an <mark class="mark-end">end point</mark> and guess if 
+					the number, for example the number of people who live in an area, is 
+					<strong>higher</strong> or <strong>lower</strong> than the previous area. 
+					If you guess wrong, you’ll have to choose a different route.
+				</p>
 			</div>
 			<div>
 				<h3>Game modes</h3>
-				<p><strong>Classic -</strong> Find your own route from start to finish. If you get a wrong answer you'll have to find another route.</p>
-				<p><strong>Beat the clock -</strong> Same as classic mode, but played against the clock. You get 5 seconds per area, based on your most direct route to the finish.</p>
-				<!-- <p><strong>Fixed route -</strong> Follow a fixed route from start to finish. Carry on even if you get a wrong answer.</p> -->
-				<p><strong>Daily game -</strong> A new route each day, played in classic mode.</p>
+				<p><strong>Classic</strong><br/>Find your own route from start to finish. No time limit.</p>
+				<p><strong>Beat the clock</strong><br/>The same as classic mode, but with a time limit. The clock gives you 5 seconds per area on your most direct route.</p>
+				<p><strong>Daily game</strong><br/>Play a new set route each day, in classic mode.</p>
 			</div>
 			<div>
 				<h3>Credits</h3>
 				<p>
-					Game developed by the ONS digital content team.
-					Data from <a href="https://www.ons.gov.uk/releases/initialfindingsfromthe2021censusinenglandandwales/" target="_blank">Census 2021 first release</a>, ONS.
+					Game developed by the Office for National Statistics (ONS).
+					Data from <a href="https://www.ons.gov.uk/releases/initialfindingsfromthe2021censusinenglandandwales/" target="_blank" class="game-ref-link">Census 2021 first release</a>, ONS.
 					Coded using <a href="https://svelte.dev/" target="_blank">Svelte</a>.
+					<a href="https://github.com/odileeds/hexmaps/" target="_blank">Local authorities hexmap</a> by Open Innovations.
 					<a href="https://github.com/olihawkins/d3-hexjson/" target="_blank">Hexmap rendering script</a> by Oli Hawkins.
-					<a href="https://github.com/odileeds/hexmaps/" target="_blank">Local authorities hexmap</a> by ODI Leeds.
 				</p>
 				<div class="logo-block">
-					<a href="https://www.ons.gov.uk/" target="_blank" class="logo" style:width="270px">
+					<a href="https://www.ons.gov.uk/" target="_blank" class="logo game-ref-link" style:width="270px">
 						<ONSLogo/>
 					</a>
-					<a href="https://www.ons.gov.uk/census/" target="_blank" class="logo" style:width="160px">
+					<a href="https://www.ons.gov.uk/census/" target="_blank" class="logo game-ref-link" style:width="160px">
 						<CensusLogo/>
 					</a>
 				</div>
@@ -586,7 +635,8 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	<div id="game-container">
 		<section class="columns flex-reverse">
 			<div>
-				{#each modes as mode}
+				{#if modes.filter(mode => history.stats[mode.code].won + history.stats[mode.code].lost > 0).length > 0}
+				{#each modes.filter(mode => history.stats[mode.code].won + history.stats[mode.code].lost > 0) as mode}
 				<h3>{mode.label} {mode.code == 'daily' ? 'game' : 'mode'}</h3>
 				<div class="stats-grid">
 					<div>
@@ -609,7 +659,18 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 				<hr/>
 				{/each}
 				<div class="stats-block" style:margin-top="25px">
-					<button class="btn-menu btn-menu-inline" on:click={() => getPNG(mapel, 'CensusMapGame')}><Icon type="save" margin/> Save the map</button>
+					<button class="btn-menu btn-menu-inline" on:click={() => getPNG(mapel, 'CensusMapGame')}><Icon type="save" margin/> Download map</button>
+				</div>
+				{:else}
+				<div class="stats-block">
+					<h3>Your game stats will appear here once you've played the game.</h3>
+				</div>
+				{/if}
+				<hr/>
+				<div class="stats-block">
+					<p>
+						Find out more about the <a href="https://www.ons.gov.uk/census" target="_blank" class="game-ref-link">results from Census 2021 on the ONS website.</a>
+					</p>
 				</div>
 			</div>
 			<div class="mini-map" bind:this={mapel}>
@@ -629,7 +690,11 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	
 	{:else if status === "route"}
 	<div id="breadcrumb">
-		<span><Icon type="chevron" rotation={180}/><button class="btn-link" on:click={() => setStatus("prev")}>Back</button></span>
+		<span>
+			<Icon type="chevron" rotation={180}/><button class="btn-link" on:click={() => setStatus("prev")}>Back</button> |
+			<span class="nowrap">{`${modes.find(d => d.code == game.mode).label} mode`} |</span>
+			<span class="nowrap">{datasets.find(d => d.code == game.dataset).label}</span>
+		</span>
 	</div>
 	<div id="q-container">
 			<div>
@@ -640,7 +705,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 					value={hexes.find(d => d.key == game.start)}
 					idKey="key" labelKey="n" placeholder="Select start of route"
 					on:select={e => setStartEnd(e, 'start')}
-					on:clear={() => { game.start = null; game.steps = []; setHexes(); }}/>
+					on:clear={() => unSelect('start')}/>
 			</div>
 			<div>
 				End<br/>
@@ -651,7 +716,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 					value={hexes.find(d => d.key == game.end)}
 					idKey="key" labelKey="n" placeholder="Select end of route"
 					on:select={e => setStartEnd(e, 'end')}
-					on:clear={() => { game.end = null; game.steps = []; setHexes(); }}/>
+					on:clear={() => unSelect('end')}/>
 				{/if}
 			</div>
 	</div>
@@ -663,7 +728,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 			{:else}
 			<span class="nowrap">{`${modes.find(d => d.code == game.mode).label} mode`} |</span>
 			{/if}
-			{datasets.find(d => d.code == game.dataset).label}
+			<span class="nowrap">{datasets.find(d => d.code == game.dataset).label} |</span>
 			{`${data[game.start].name} to ${data[game.end].name}`}
 		</span>
 		<span>
@@ -675,22 +740,24 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	</div>
 	<div id="q-container" aria-live="assertive">
 		<div>
-			<span class="text-lrg">{status == "won" ? 'Congratulations!' : 'Sorry...'}</span><br />
-			<Icon type={status == "won" ? 'tick' : 'cross'} margin/> {status == "won" ? `You made it from ${data[game.start].name} to ${data[game.end].name}` : `You failed to get from ${data[game.start].name} to ${data[game.end].name}`}
+			<span class="text-lrg">{status == "won" ? 'Congratulations!' : 'Oops...'}</span><br />
+			<span style:margin-left="2px"><Icon type={status == "won" ? 'tick' : 'cross'} margin/> {status == "won" ? `You made it from ${data[game.start].name} to ${data[game.end].name}` : `You did not make it from ${data[game.start].name} to ${data[game.end].name}`}</span>
 		</div>
 	</div>
 	<div id="game-container">
 		<section class="columns flex-reverse">
 			<div>
 				<h3>Game stats</h3>
+				{#if status === 'won'}
 				<div class="stats-block">
 					You took<br/>
 					<span class="text-lrg">{game.record.length} turns</span>
-					<span class="muted">(vs minimum {game.steps.length - 1} turns)</span>
+					<span class="muted">(shortest route {game.steps.length - 1} turns)</span>
 					<Bar data={[game.record.length]} colors={['#333']}/>
 					<Bar data={[game.steps.length - 1, game.record.length + 1 - game.steps.length]} colors={['darkgrey', null]}/>
 				</div>
 				<hr/>
+				{/if}
 				<div class="stats-block">
 					You scored<br/>
 					<span class="text-lrg">{Math.round(100 * ((game.right.length - 1) / game.record.length))}%</span>
@@ -710,8 +777,14 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 				<hr/>
 				{/if}
 				<div class="stats-block" style:margin-top="25px">
-					<button class="btn-menu btn-menu-inline btn-primary" on:click={share}><Icon type="share" margin/> Share your score</button>
-					<button class="btn-menu btn-menu-inline" on:click={() => getPNG(mapel, 'CensusMapGame')}><Icon type="save" margin/> Save the map</button>
+					<button class="btn-menu btn-menu-inline btn-primary" on:click={share}><Icon type="share" margin/> Share score</button>
+					<button class="btn-menu btn-menu-inline" on:click={() => getPNG(mapel, 'CensusMapGame')}><Icon type="save" margin/> Download map</button>
+				</div>
+				<hr/>
+				<div class="stats-block">
+					<p>
+						Find out more about the <a href="https://www.ons.gov.uk/census" target="_blank" class="game-ref-link">results from Census 2021 on the ONS website.</a>
+					</p>
 				</div>
 			</div>
 			<div class="mini-map" bind:this={mapel}>
@@ -745,7 +818,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	<div id="q-container">
 		<div area-hidden="true">
 			<span class="text-lrg">{game.selected.n}</span><br/>
-			<strong>{data[game.selected.key][game.dataset].toLocaleString()}</strong>
+			<strong>{f(data[game.selected.key][game.dataset])}</strong>
 			{datasets.find(d => d.code == game.dataset).unit}
 		</div>
 		{#if !game.next}
@@ -793,11 +866,16 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 <style>
 	a {
 		color: #206095;
+		text-decoration: underline;
+	}
+	a:hover {
+		color: black;
 	}
 	h1 {
 		font-size: 1.8em;
 		margin: 0 0 5px 0;
 		text-align: left;
+		color: white;
 	}
 	@media(max-width: 440px){
     h1 {
@@ -805,7 +883,6 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 			margin-top: 2px;
     }
   }
-	
 	h2 {
 		margin: 0 0 5px 0;
 	}
@@ -816,15 +893,15 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
     border: none;
     height: 1px;
     background-color: darkgrey;
-}
+	}
 	main {
 		display: flex;
 		flex-direction: column;
-		height: calc(100vh - 6px);
-		max-height: calc(100vh - 6px);
-		margin: 3px auto;
+		height: 100vh;
+		max-height: 100vh;
+		margin: 0 auto;
 		text-align: center;
-		width: calc(100% - 6px);
+		width: 100%;
 		max-width: 980px;
 		background-color: #44368F;
 		background-image: linear-gradient(to right, #44368F, #8C2292);
@@ -843,16 +920,19 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	nav {
 		white-space: nowrap;
 	}
+	nav button:hover {
+		color: #bbb;
+	}
 	#breadcrumb {
 		display: flex;
 		flex-shrink: 0;
 		flex-direction: row;
 		align-items: stretch;
 		justify-content: space-between;
-		width: calc(100% - 6px);
+		width: calc(100% - 8px);
 		min-height: 27px;
 		background-color: white;
-		margin: 0 3px;
+		margin: 0 4px;
 		padding: 2px 9px 0 9px;
 	}
 	#breadcrumb > span:nth-of-type(1) {
@@ -867,21 +947,21 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	#game-container {
 		box-sizing: border-box;
 		flex-grow: 1;
-		margin: 0 3px 3px 3px;
+		margin: 0 4px 4px 4px;
 		padding: 0;
 		position: relative;
 		overflow-y: auto;
-		width: calc(100% - 6px);
+		width: calc(100% - 8px);
 		background-color: white;
 	}
 	#q-container {
 		display: flex;
-		width: calc(100% - 6px);
+		width: calc(100% - 8px);
 		flex-direction: row;
 		align-items: stretch;
 		box-sizing: border-box;
 		min-height: 85px;
-		margin: 0 3px;
+		margin: 0 4px;
 		padding: 10px 0;
 		border-bottom: none;
 		text-align: left;
@@ -906,11 +986,11 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 		margin: 0;
 	}
 	#menu {
-		width: 400px;
-		max-width: calc(100% - 40px);
+		width: 360px;
+		max-width: 100%;
 		height: calc(100% - 75px);
 		margin: 0 auto;
-		padding: 40px 0;
+		padding: 20px 0 10px 0;
 		text-align: left;
 	}
 	#button-container {
@@ -930,8 +1010,8 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	}
 	.columns > div {
 		width: 300px;
-		margin: 10px;
-		padding: 0;
+		max-width: 100%;
+		padding: 10px;
 		flex-grow: 1;
 	}
 	.flex-reverse {
@@ -983,9 +1063,15 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 		border: none;
 		font-weight: bold;
 	}
+	.btn-menu:hover {
+		background-color: #b0b0b0;
+	}
 	.btn-primary {
 		background-color: #902082;
 		color: white;
+	}
+	.btn-primary:hover {
+		background-color: #7d1c71;
 	}
 	.btn-menu-inline {
 		display: inline-block;
@@ -993,6 +1079,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 		max-width: auto;
 		text-align: left;
 		padding: 0.4em 0.8em;
+		margin-bottom: 0;
 	}
 	.btn-link {
 		background: none !important;
@@ -1003,6 +1090,9 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 		font-weight: normal;
 		text-decoration: underline;
 		cursor: pointer;
+	}
+	.btn-link:hover {
+		color: black;
 	}
 	.btn-title {
 		color: white;
@@ -1030,6 +1120,9 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	label:focus-within {
 		outline: 3px solid orange;
 	}
+	label:hover {
+		background-color: #eee;
+	}
 	.label-active {
 		background-color: #eee;
 	}
@@ -1049,6 +1142,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
     padding: 0;
     appearance: none;
     border: 2px solid #222;
+		background: white;
     height: 22px;
     left: 8px;
     top: 50%;
@@ -1060,7 +1154,7 @@ https://www.ons.gov.uk/visualisations/census-map-game/`;
 	}
 	input[type="radio"]:checked {
     background: #222;
-    box-shadow: inset 0 0 0 3px #fff;
+    box-shadow: inset 0 0 0 3px white;
 	}
 	.text-lrg {
 		font-size: 1.4rem;

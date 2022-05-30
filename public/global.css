@@ -7,14 +7,15 @@
 html, body {
 	position: relative;
 	background-color: white;
-	box-sizing: border-box;
 	color: #222;
 	margin: 0;
 	padding: 0;
 	font-family: 'Open Sans', sans-serif;
   font-weight:400;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
+}
+
+body {
+	background-color: lightgrey;
 }
 
 a {

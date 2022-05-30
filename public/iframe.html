@@ -1,4 +1,9 @@
+<!DOCTYPE html>
 <html lang="en">
+
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width,initial-scale=1'>
   <link rel='stylesheet' href='./global.css'>
   <style>
     * {
@@ -21,12 +26,19 @@
       margin: 10px 0;
     }
   </style>
-  <body>
-    <main>
-      <h1>iFrame test</h1>
-      <div id="game"></div>
-      <script src="http://cdn.ons.gov.uk/vendor/pym/1.3.2/pym.min.js"></script>
-      <script>var pymParent = new pym.Parent("game", "./");</script>
-    </main>
-  </body>
+</head>
+
+<body>
+  <main>
+    <h1>iFrame test</h1>
+    <h3>Pym.js iFrame</h3>
+    <div id="game"></div>
+    <script src="./temp/pym.min.js"></script>
+    <script>var pymParent = new pym.Parent("game", "/", {allowfullscreen: true});</script>
+
+    <h3>Fixed 600px height iFrame</h3>
+    <iframe src="/" width="100%" height="600px" frameborder="0" allowfullscreen></iframe>
+  </main>
+</body>
+
 </html>

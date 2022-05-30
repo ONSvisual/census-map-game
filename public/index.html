@@ -4,15 +4,15 @@
 <head>
 	<meta charset='utf-8'>
 	<meta name='viewport' content='width=device-width,initial-scale=1'>
-	<meta property="og:title" content="Census Map Game" />
+	<meta property="og:title" content="Census 2021 Higher or Lower Map Game" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://www.ons.gov.uk/visualisations/census-map-game/" />
 	<meta property="og:image" content="https://www.ons.gov.uk/visualisations/census-map-game/img/og.jpg" />
 	<meta property="og:image:type" content="image/jpeg" />
-	<meta property="og:description" content="A map-based guessing game based on 2021 Census data for England and Wales." />
-	<meta name="description" content="A map-based guessing game based on 2021 Census data for England and Wales." />
+	<meta property="og:description" content="Guessing game made with 2021 Census data for England and Wales." />
+	<meta name="description" content="Guessing game made with 2021 Census data England and Wales." />
 
-	<title>Census Map Game - Census data guessing game</title>
+	<title>Census 2021 Higher or Lower Map Game - ONS</title>
 
 	<link rel='icon' type='image/png' href='./favicon.png'>
 	<link rel='stylesheet' href='./global.css'>
@@ -20,11 +20,33 @@
 	
 	<script src="https://cdn.ons.gov.uk/vendor/pym/1.3.2/pym.min.js"></script>
 	<script defer src='./build/bundle.js'></script>
-	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-		new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-		j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-		'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-		})(window,document,'script','dataLayer','GTM-MBCBVQS');</script>
+	<script>
+		function getUsageCookieValue() {
+			var cookiesPolicyCookie = document.cookie.match('(^|;) ?cookies_policy=([^;]*)(;|$)');
+			if (cookiesPolicyCookie) {
+				var decodedCookie = decodeURIComponent(cookiesPolicyCookie[2])
+				var cookieValue = JSON.parse(decodedCookie)
+				return !cookieValue.usage
+			}
+			return true
+		}
+
+		window.dataLayer = [{
+			"analyticsOptOut": getUsageCookieValue(),
+			"gtm.whitelist": ["google", "hjtc", "lcl"],
+			"gtm.blacklist": ["customScripts", "sp", "adm", "awct", "k", "d", "j"],
+			"contentTitle": "Census Map Game",
+			"releaseDate": "20220628",
+			"contentType": "game",
+			"outputSeries": "initialfindingsfromthe2021censusinenglandandwales"
+		}];
+
+		(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+			new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+			j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+			'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+		})(window,document,'script','dataLayer','GTM-MBCBVQS');
+	</script>
 </head>
 
 <body>
@@ -37,6 +59,7 @@
 			pymChild.sendMessage('height', 600, 1000);
 		});
 	</script>
+
 	<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MBCBVQS"
 		height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </body>

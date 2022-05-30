@@ -23,20 +23,15 @@ export const datasets = [
 		code: "population",
 		unit: "people"
 	},
-	// {
-	// 	label: "Average age",
-	// 	code: "age_med",
-	// 	unit: "years"
-	// },
 	{
 		label: "Population density",
 		code: "density",
-		unit: "people per hectate"
+		unit: "people per square km"
 	},
 	{
 		label: "Area in square km",
 		code: "area",
-		unit: "square kilometres"
+		unit: "square km"
 	}
 ];
 
