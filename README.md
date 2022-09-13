@@ -1,5 +1,5 @@
 # Census Map Game
-Hexmap based high-or-lower geography quiz game.
+This is the source code for the [Census Map Game](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/articles/playthecensus2021populationmapgame/2022-06-28) published by the ONS as part of the Census 2021 first results.
 
 ## Using this code
 
