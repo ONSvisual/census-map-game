@@ -3,7 +3,7 @@
 	export let lineWidth = 3;
 	export let height = 10;
 	export let breaks = [0,20,40,60,80,100];
-	export let colors = ['#f66068', '#bf7574', '#808080', '#69a89b', '#22d0b6'];
+	export let colors = ['#f66068', '#ef9f91', '#dbd6bd', '#8ebdb2', '#00a3a6'];
   export let suffix = "%";
 	export let snapticks = true;
 	

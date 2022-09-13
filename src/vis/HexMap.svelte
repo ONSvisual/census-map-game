@@ -20,7 +20,7 @@
 	export let vis = null;
 	export let message = null;
 
-	const colors = ['#f66068', '#bf7574', '#808080', '#69a89b', '#22d0b6'];
+	const colors = ['#f66068', '#ef9f91', '#dbd6bd', '#8ebdb2', '#00a3a6'];
 	const breaks = [0, 20, 40, 60, 80, 100];
 
 	let next_index = 0;
@@ -58,10 +58,10 @@
 			next_index = 0;
 		} else if (["ArrowRight", "ArrowDown"].includes(e.key)) {
 			next_index = next_index + 1 == next.length ? 0 : next_index + 1;
-			hexes['next' + next_index].focus();
+			hexes['next' + next_index].focus({preventScroll: true});
 		} else if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
 			next_index = next_index - 1 < 0 ? next.length - 1 : next_index - 1;
-			hexes['next' + next_index].focus();
+			hexes['next' + next_index].focus({preventScroll: true});
 		}
 	}
 
@@ -163,8 +163,8 @@
 
 <style>
 	.hex {
-		fill: darkgrey;
-		stroke: darkgrey;
+		fill: #b0b0b0;
+		stroke: #b0b0b0;
 		stroke-width: 4px;
 		transform: scale(0.82);
 	}
@@ -179,8 +179,8 @@
 		transform: translateY(1px);
 	}
 	.start > polygon, .selected > polygon, .right > polygon {
-		fill: #22D0B6;
-		stroke: #22D0B6;
+		fill: #00A3A6;
+		stroke: #00A3A6;
 	}
 	.wrong > polygon {
 		fill: #F66068;
@@ -191,7 +191,7 @@
 	}
 	.next > polygon {
 		fill: grey;
-		stroke: #22D0B6;
+		stroke: #00A3A6;
 	}
 	.end > polygon {
 		fill: #206095;

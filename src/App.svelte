@@ -1,4 +1,5 @@
 <script>
+	import { onMount } from "svelte";
 	import { format } from "d3-format";
 	import { renderHexJSON } from "./lib/hexjson";
 	import Random from "./lib/random";
@@ -22,6 +23,13 @@
 	const zeroday = Math.floor(new Date("2022-06-27").setHours(0,0,0,0) / (60 * 60 * 24 * 1000));
 	const today = Math.floor(new Date().setHours(0,0,0,0) / (60 * 60 * 24 * 1000));
 	const midnight = new Date().setHours(24,0,0,0);
+
+	// Parent page URL, if defined
+	let parent_url = "https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/articles/playthecensus2021populationmapgame/2022-06-28";
+	onMount(() => {
+		let url_string = new URLSearchParams(window.location.search).get("parentUrl");
+		if (url_string) parent_url = decodeURIComponent(url_string);
+	});
 
 	// Initialise number formatter. Zero decimal places, 1,000s comma separated
 	const f = format(",.0f");
@@ -128,7 +136,7 @@
 			await sleep(50);
 			setHexes();
 			await sleep(50);
-			qhigher.focus();
+			qhigher.focus({preventScroll: true});
 		} else if (status == "route" && game.route == "map") {
 			if (!game.start) {
 				game.start = e.detail.obj.key;
@@ -150,7 +158,7 @@
 			(hl == "higher" && data[game.next.key][game.dataset] >= data[game.selected.key][game.dataset]) ||
 			(hl == "lower" && data[game.next.key][game.dataset] <= data[game.selected.key][game.dataset])
 		) {
-			e.target.style["background-color"] = "#22D0B6";
+			e.target.style["background-color"] = "#00A3A6";
 			message_guess = "Correct!";
 			await sleep(750);
 			game.right.push(game.next.key);
@@ -225,14 +233,14 @@
 
 		if (status == "select") {
 			await sleep(50);
-			maphexes["next0"].focus();
+			maphexes["next0"].focus({preventScroll: true});
 		}
 
 		if (status == "won" || status == "lost") {
 			dataLayer.push({
-				event: "gameStart",
+				event: "gameEnd",
 				result: status,
-				mode: game.mode,
+				mode: game.mode == "classic" ? "regular" : game.mode,
 				dataset: game.dataset,
 				start: data[game.start].name,
 				end: data[game.end].name
@@ -249,21 +257,25 @@
 		status = game.mode == "fixed" ? "question" : "select";
 
 		if (game.mode == "timed") {
-			clock = 5 * (game.steps.length - 1);
+			clock = 7 * (game.steps.length - 1);
 			timer = setInterval(updateTimer, 1000);
 			function updateTimer() {
 				clock -= 1;
 				if (clock == 0) {
-					clearInterval(timer);
 					if (status != "won") status = "lost";
 
 					dataLayer.push({
-						event: "gameStart",
+						event: "gameEnd",
 						result: status,
-						mode: game.mode,
+						mode: game.mode == "classic" ? "regular" : game.mode,
 						dataset: game.dataset,
 						start: data[game.start].name,
 						end: data[game.end].name
+					});
+
+					sleep(50).then(() => {
+						clearInterval(timer);
+						timer = null;
 					});
 				}
 			}
@@ -281,7 +293,7 @@
 
 		dataLayer.push({
 			event: "gameStart",
-			mode: game.mode,
+			mode: game.mode == "classic" ? "regular" : game.mode,
 			dataset: game.dataset,
 			start: data[game.start].name,
 			end: data[game.end].name
@@ -289,9 +301,9 @@
 
 		await sleep(50);
 		if (game.mode == "fixed") {
-			qhigher.focus();
+			qhigher.focus({preventScroll: true});
 		} else {
-			maphexes["next0"].focus();
+			maphexes["next0"].focus({preventScroll: true});
 		}
 	}
 
@@ -302,7 +314,7 @@
 			setHexes();
 			if(status == "select") {
 				await sleep(50);
-				maphexes["next0"].focus();
+				maphexes["next0"].focus({preventScroll: true});
 			}
 		} else {
 			history.daily.day = today;
@@ -392,9 +404,9 @@
 	function toggleHL(e) {
 		if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
 			if (e.target == qhigher) {
-				qlower.focus();
+				qlower.focus({preventScroll: true});
 			} else {
-				qhigher.focus();
+				qhigher.focus({preventScroll: true});
 			}
 		}
 	}
@@ -406,7 +418,7 @@
 			let arr = Array.prototype.slice.call(buttons).map(button => button.innerText);
 			let index = arr.indexOf(buttonText);
 			let newindex = e.key == "ArrowDown" || e.key == "ArrowRight" ? (index + 1) % buttons.length : (index + buttons.length - 1) % buttons.length;
-			buttons[newindex].focus();
+			buttons[newindex].focus({preventScroll: true});
 		}
 	}
 
@@ -430,9 +442,9 @@
 
 		await sleep(50);
 		if (!game[other]) {
-			el['select-' + other].getElementsByTagName('input')[0].focus();
+			el['select-' + other].getElementsByTagName('input')[0].focus({preventScroll: true});
 		} else {
-			el['select-confirm'].focus();
+			el['select-confirm'].focus({preventScroll: true});
 		}
 	}
 
@@ -445,17 +457,17 @@
 
 		await sleep(50);
 		if (start_end == "end" && !game.start) start_end = "start";
-		el["select-" + start_end].getElementsByTagName("input")[0].focus();
+		el["select-" + start_end].getElementsByTagName("input")[0].focus({preventScroll: true});
 	}
 
 	function share() {
-		let mode = game.mode == "daily" ? `Daily game #${today - zeroday + 1}` : modes.find(d => d.code == game.mode).label;
+		let mode = game.mode == "daily" ? `Daily game ${today - zeroday}` : modes.find(d => d.code == game.mode).label;
 		let dataset = datasets.find(d => d.code == game.dataset).label;
 		let str = `#CensusMapGame | ${mode}
 ${data[game.start].name} to ${data[game.end].name} | ${dataset}
-${game.record.map((d, i) => status == 'won' && i == game.record.length - 1 ? '🟦' : d ? '🟩' : '🟥').join('')}
+${game.record.map((d, i) => status == 'won' && i == game.record.length - 1 ? '☑️' : d ? '✅' : '🟥').join('')}
 ${status == 'won' ? 'Won' : 'Lost'} in ${game.record.length} turns (shortest route ${game.steps.length - 1}) | ${Math.floor(100 * ((game.right.length - 1) / game.record.length))}% correct
-https://bit.ly/census-map-game/`;
+${parent_url}`;
 		navigator.clipboard.writeText(str)
 		.then(() => alert("Copied: " + str));
 	}
@@ -499,11 +511,11 @@ https://bit.ly/census-map-game/`;
 
 <main>
 <header>
-	<button on:click={() => setStatus("mode")} class="btn-link btn-title" title="Census Map Game. Return to menu"><h1>Census Map Game</h1></button>
+	<button on:click={() => setStatus("mode")} class="btn-link btn-title" title="Census map game. Return to menu"><h1>Census map game</h1></button>
 	<nav>
-		<button on:click={() => setStatus("info")} title="About the game" use:tooltip><Icon type="info"/></button>
-		<button on:click={() => setStatus("scores")} title="View score history" use:tooltip><Icon type="chart"/></button>
-		<button on:click={toggleFullscreen} title=" Full screen mode" use:tooltip><Icon type="{fullscreen ? 'full_exit' : 'full'}"/></button>
+		<button class="btn-nav" on:click={() => setStatus("info")} title="About the game" data-gtm-label="About the game" use:tooltip><Icon type="info"/></button>
+		<button class="btn-nav" on:click={() => setStatus("scores")} title="View game history" data-gtm-label="View game history" use:tooltip><Icon type="chart"/></button>
+		<button class="btn-nav" on:click={toggleFullscreen} title="Full screen mode" data-gtm-label="Full screen mode" use:tooltip><Icon type="{fullscreen ? 'full_exit' : 'full'}"/></button>
 	</nav>
 </header>
 
@@ -535,8 +547,8 @@ https://bit.ly/census-map-game/`;
 						interactive={false}
 					/>
 				</div>
-				<p><strong>Census Map Game</strong> is a guessing game made with 2021 Census data.</p>
-				<p><button class="btn-link" on:click={() => setStatus("info")}>Read how to play</button><Icon type="chevron"/></p>
+				<p><strong>Census map game</strong> is a guessing game made with Census 2021 data.</p>
+				<p><button class="btn-link" on:click={() => setStatus("info")}>Read about how to play</button><Icon type="chevron"/></p>
 			</div>
 		</section>
 	</div>
@@ -548,7 +560,7 @@ https://bit.ly/census-map-game/`;
 		</span>
 	</div>
 	<div id="q-container" aria-live="assertive">
-		<h2><span class="text-lrg">Choose dataset</span></h2>
+		<h2><span class="text-lrg">Choose topic</span></h2>
 	</div>
 	<div id="game-container">
 		<section class="columns">
@@ -560,10 +572,10 @@ https://bit.ly/census-map-game/`;
 					{#each datasets as dataset, i}
 					<label class:label-active={game.dataset == dataset.code} bind:this={el['dataset-' + i]}>
 						<input type="radio" bind:group={game.dataset} name="scoops" value={dataset.code}>
-						{dataset.label}
+						{dataset.label_long ? dataset.label_long : dataset.label}
 					</label>
 					{/each}
-					<button type="submit" class="btn-menu btn-primary mt-10" style:width="100%" on:click={async () => { setStatus("route"); game.route = "map"; resetRoute(); await sleep(50); el['select-start'].getElementsByTagName('input')[0].focus(); }}>Select route</button>
+					<button type="submit" class="btn-menu btn-primary mt-10" style:width="100%" on:click={async () => { setStatus("route"); game.route = "map"; resetRoute(); await sleep(50); el['select-start'].getElementsByTagName('input')[0].focus({preventScroll: true}); }}>Select route</button>
 				</form>
 			</div>
 		</section>
@@ -579,7 +591,7 @@ https://bit.ly/census-map-game/`;
 		<section class="columns">
 			<div>
 				<h3>How to play</h3>
-				<p><strong>Census Map Game</strong> is a guessing game made with 2021 Census data. Each hexagon on the map is a local authority in England and Wales.</p>
+				<p><strong>Census map game</strong> is a guessing game made with Census 2021 data. Each hexagon on the map is a local authority in England and Wales.</p>
 				<div class="mini-map" style:margin-top="5px" style:height="150px" style:max-width="500px">
 					<HexMap
 						data={hexes.filter(d => sample_hexes.includes(d.key))}
@@ -591,20 +603,23 @@ https://bit.ly/census-map-game/`;
 					/>
 				</div>
 				<p>
-					You need to travel from a <mark class="mark-start">start point</mark>
-					to an <mark class="mark-end">end point</mark> and guess if 
-					the number, for example the number of people who live in an area, is 
-					<strong>higher</strong> or <strong>lower</strong> than the previous area. 
-					If you guess wrong, you’ll have to choose a different route.
+					Move from a <mark class="mark-start">start point</mark> to an 
+					<mark class="mark-end">end point</mark> on the map by guessing if the number 
+					of people who live in each local authority is <strong>higher</strong> or 
+					<strong>lower</strong> than the previous one. If you guess incorrectly, 
+					you will have to choose a different route.
 				</p>
 			</div>
 			<div>
 				<h3>Game modes</h3>
-				<p><strong>Classic</strong><br/>Find your own route from start to finish. No time limit.</p>
-				<p><strong>Beat the clock</strong><br/>The same as classic mode, but with a time limit. The clock gives you 5 seconds per area on your most direct route.</p>
-				<p><strong>Daily game</strong><br/>Play a new set route each day, in classic mode.</p>
+				<p><strong>Regular</strong><br/>Find your own route from start to finish. No time limit.</p>
+				<p><strong>Beat the clock</strong><br/>The same as regular mode but with a time limit. The clock gives you seven seconds per area on your most direct route.</p>
+				<p><strong>Daily game</strong><br/>Play a new set route each day, in regular mode.</p>
 			</div>
+		</section>
+		<section class="columns">
 			<div>
+				<hr/>
 				<h3>Credits</h3>
 				<p>
 					Game developed by the Office for National Statistics (ONS).
@@ -614,10 +629,10 @@ https://bit.ly/census-map-game/`;
 					<a href="https://github.com/olihawkins/d3-hexjson/" target="_blank">Hexmap rendering script</a> by Oli Hawkins.
 				</p>
 				<div class="logo-block">
-					<a href="https://www.ons.gov.uk/" target="_blank" class="logo game-ref-link" style:width="270px">
+					<a href="https://www.ons.gov.uk/" target="_blank" class="logo game-ref-link" style:width="230px">
 						<ONSLogo/>
 					</a>
-					<a href="https://www.ons.gov.uk/census/" target="_blank" class="logo game-ref-link" style:width="160px">
+					<a href="https://www.ons.gov.uk/census/" target="_blank" class="logo game-ref-link" style:width="135px">
 						<CensusLogo/>
 					</a>
 				</div>
@@ -724,7 +739,7 @@ https://bit.ly/census-map-game/`;
 	<div id="breadcrumb">
 		<span>
 			{#if game.route == 'daily'}
-			<span class="nowrap">{`Daily game #${today - zeroday}`} |</span>
+			<span class="nowrap">{`Daily game ${today - zeroday}`} |</span>
 			{:else}
 			<span class="nowrap">{`${modes.find(d => d.code == game.mode).label} mode`} |</span>
 			{/if}
@@ -733,7 +748,7 @@ https://bit.ly/census-map-game/`;
 		</span>
 		<span>
 			{#if game.mode != "daily"}
-			<button class="btn-link" on:click={startGame}>Replay game</button> <Icon type="replay"/> |
+			<button class="btn-link" on:click={startGame}>Replay game</button> |
 			{/if}
 			<button class="btn-link" on:click={quitGame}>Return to menu</button>
 		</span>
@@ -747,12 +762,12 @@ https://bit.ly/census-map-game/`;
 	<div id="game-container">
 		<section class="columns flex-reverse">
 			<div>
-				<h3>Game stats</h3>
+				<h3>Game statistics</h3>
 				{#if status === 'won'}
 				<div class="stats-block">
 					You took<br/>
 					<span class="text-lrg">{game.record.length} turns</span>
-					<span class="muted">(shortest route {game.steps.length - 1} turns)</span>
+					<span class="muted">(the shortest route was {game.steps.length - 1} turns)</span>
 					<Bar data={[game.record.length]} colors={['#333']}/>
 					<Bar data={[game.steps.length - 1, game.record.length + 1 - game.steps.length]} colors={['darkgrey', null]}/>
 				</div>
@@ -762,7 +777,7 @@ https://bit.ly/census-map-game/`;
 					You scored<br/>
 					<span class="text-lrg">{Math.round(100 * ((game.right.length - 1) / game.record.length))}%</span>
 					<span class="muted">({game.right.length - 1} correct out of {game.record.length})</span><br/>
-					<Bar data={[game.right.length - 1, game.wrong.length]} colors={['#22D0B6', '#F66068']}/>
+					<Bar data={[game.right.length - 1, game.wrong.length]} colors={['#00A3A6', '#F66068']}/>
 				</div>
 				<hr/>
 				{#if game.mode == "daily"}
@@ -776,7 +791,7 @@ https://bit.ly/census-map-game/`;
 				</div>
 				<hr/>
 				{/if}
-				<div class="stats-block" style:margin-top="25px">
+				<div class="stats-block" style:margin="25px 0 calc(25px - 0.5em) 0">
 					<button class="btn-menu btn-menu-inline btn-primary" on:click={share}><Icon type="share" margin/> Share score</button>
 					<button class="btn-menu btn-menu-inline" on:click={() => getPNG(mapel, 'CensusMapGame')}><Icon type="save" margin/> Download map</button>
 				</div>
@@ -803,7 +818,7 @@ https://bit.ly/census-map-game/`;
 	<div id="breadcrumb">
 		<span>
 			{#if game.route == 'daily'}
-			<span class="nowrap">{`Daily game #${today - zeroday}`} |</span>
+			<span class="nowrap">{`Daily game ${today - zeroday}`} |</span>
 			{:else}
 			<span class="nowrap">{`${modes.find(d => d.code == game.mode).label} mode`} |</span>
 			{/if}
@@ -835,6 +850,7 @@ https://bit.ly/census-map-game/`;
 			<span class="text-lrg" aria-hidden="true">{game.next.n}</span><br/>
 			<button bind:this={qhigher} on:keydown={toggleHL} on:click={(e) => guess("higher", e)} class="btn-hilo">Higher <Icon type="arrow" rotation={90}/></button>
 			<button bind:this={qlower} on:keydown={toggleHL} on:click|preventDefault={(e) => guess("lower", e)} class="btn-hilo">Lower <Icon type="arrow" rotation={-90}/></button>
+			<button class="btn-link" on:click={async () => {game.next = null; status = "select"; setHexes(); await sleep(50); maphexes["next0"].focus({preventScroll: true});}}>Unselect</button>
 			<span aria-live="assertive">{message_guess}</span>
 		</div>
 		{/if}
@@ -890,9 +906,9 @@ https://bit.ly/census-map-game/`;
 		margin: 0;
 	}
 	hr {
-    border: none;
-    height: 1px;
-    background-color: darkgrey;
+		border: none;
+		height: 1px;
+		background-color: darkgrey;
 	}
 	main {
 		display: flex;
@@ -1057,7 +1073,7 @@ https://bit.ly/census-map-game/`;
 		display: block;
 		width: 100%;
 		height: 40px;
-		margin: 0 auto .5em auto;
+		margin: 0 auto 0.5em auto;
 		background-color: #bcbcbc;
 		color: black;
 		border: none;
@@ -1079,7 +1095,6 @@ https://bit.ly/census-map-game/`;
 		max-width: auto;
 		text-align: left;
 		padding: 0.4em 0.8em;
-		margin-bottom: 0;
 	}
 	.btn-link {
 		background: none !important;
@@ -1176,7 +1191,7 @@ https://bit.ly/census-map-game/`;
 		padding: 0 0.2em;
 	}
 	.mark-start {
-		background-color: #22D0B6;
+		background-color: #00A3A6;
 	}
 	.mark-end {
 		background-color: #206095;

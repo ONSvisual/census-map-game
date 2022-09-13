@@ -1,7 +1,6 @@
 import Tooltip from './Tooltip.svelte';
 
 export default function tooltip(element) {
-	let div;
 	let title;
 	let tooltipComponent;
 	function mouseOver(event) {
@@ -20,7 +19,7 @@ export default function tooltip(element) {
 				title: title,
 				x: x,
 				y: y,
-        width: body.width
+				width: body.width
 			},
 			target: document.body,
 		});
@@ -32,10 +31,11 @@ export default function tooltip(element) {
 	}
 	
 	element.addEventListener('mouseover', mouseOver);
-  element.addEventListener('mouseleave', mouseLeave);
+  	element.addEventListener('mouseleave', mouseLeave);
 	
 	return {
 		destroy() {
+			if (tooltipComponent) tooltipComponent.$destroy();
 			element.removeEventListener('mouseover', mouseOver);
 			element.removeEventListener('mouseleave', mouseLeave);
 		}

@@ -1,6 +1,6 @@
 export const hexurl = './data/lad-2021.json';
 export const adjurl = './data/lad-2021-adj.json';
-export const dataurl = './data/datasets-2020.csv';
+export const dataurl = './data/datasets-2021.csv';
 
 export const routes = [
 	{
@@ -30,6 +30,7 @@ export const datasets = [
 	},
 	{
 		label: "Area in square km",
+		label_long: "Area in square kilometres",
 		code: "area",
 		unit: "square km"
 	}
@@ -41,7 +42,7 @@ export const modes = [
 		code: "daily"
 	},
 	{
-		label: "Classic",
+		label: "Regular",
 		code: "classic"
 	},
 	{
